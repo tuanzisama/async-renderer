@@ -1,4 +1,4 @@
-import type { AppContext, AsyncComponentLoader, Component, VNode } from 'vue'
+import type { App, AppContext, AsyncComponentLoader, Component, VNode } from 'vue'
 
 export type Data = Record<string, unknown>
 export type AsyncRendererComponent = Component | AsyncComponentLoader
