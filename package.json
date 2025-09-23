@@ -1,0 +1,56 @@
+{
+  "name": "async-renderer",
+  "version": "1.0.0",
+  "description": "Vue plugin for rendering components asynchronously outside main app context with automatic lifecycle management and DOM cleanup.",
+  "type": "module",
+  "license": "MIT",
+  "homepage": "https://github.com/tuanzisama/async-renderer#readme",
+  "bugs": {
+    "url": "https://github.com/tuanzisama/async-renderer/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tuanzisama/async-renderer.git"
+  },
+  "author": "EvenWan <evenwan0010@163.com>",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "playground": "vite",
+    "typecheck": "vue-tsc --noEmit",
+    "release": "bumpp && pnpm publish",
+    "prepublishOnly": "pnpm run build"
+  },
+  "peerDependencies": {
+    "vue": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/lodash-es": "^4.17.12",
+    "@types/node": "^22.15.17",
+    "@vitejs/plugin-vue": "^5.2.4",
+    "bumpp": "^10.1.0",
+    "element-plus": "^2.11.3",
+    "tsdown": "^0.11.9",
+    "typescript": "^5.8.3",
+    "vite": "npm:rolldown-vite@latest",
+    "vue": "^3.5.13",
+    "vue-tsc": "^3.0.3"
+  },
+  "dependencies": {
+    "lodash-es": "^4.17.21",
+    "nanoid": "^5.1.6"
+  }
+}
