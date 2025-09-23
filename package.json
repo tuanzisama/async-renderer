@@ -4,6 +4,13 @@
   "description": "Vue plugin for rendering components asynchronously outside main app context with automatic lifecycle management and DOM cleanup.",
   "type": "module",
   "license": "MIT",
+  "keywords": [
+    "vue",
+    "async-renderer",
+    "component",
+    "dialog",
+    "modal"
+  ],
   "homepage": "https://github.com/tuanzisama/async-renderer#readme",
   "bugs": {
     "url": "https://github.com/tuanzisama/async-renderer/issues"
