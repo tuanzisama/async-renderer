@@ -8,5 +8,6 @@ export default defineConfig([
     dts: {
       vue: true,
     },
+    minify: true,
   },
 ])
