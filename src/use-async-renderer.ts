@@ -2,7 +2,6 @@ import { hasInjectionContext, inject, type App } from "vue";
 import type { AsyncRendererComponent, Data, AsyncRendererOptions, AsyncRendererPluginConfig } from "./types"
 import { APP_CONTEXT, PLUGIN_CONFIG } from "./constants";
 import { AsyncRenderer } from "./core";
-import { merge } from "lodash-es";
 
 /**
  * Vue composable for async renderer functionality
@@ -39,7 +38,7 @@ function useAsyncRenderer() {
     if (!appContext) {
       throw new Error('AsyncRendererPlugin is not installed correctly: app context is missing.')
     }
-    const arInstance = new AsyncRenderer(component, merge({ props: props || {}, pluginConfig: pluginConfig || {}, appContext }, options))
+    const arInstance = new AsyncRenderer(component, Object.assign({ props: props || {}, pluginConfig: pluginConfig || {}, appContext }, options))
     map.set(arInstance.instanceId, arInstance)
     return arInstance
   }

@@ -1,7 +1,6 @@
 import type { App, AppContext, AsyncComponentLoader, Component } from 'vue'
 import { createApp, createVNode, defineAsyncComponent } from 'vue'
 import type { AsyncRendererProvide, AsyncRendererComponent, Data, AsyncRendererPluginConfig, AsyncRendererInternalConfig } from './types'
-import { isFunction } from 'lodash-es'
 import { customAlphabet } from 'nanoid'
 
 const nanoid = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz', 10)
@@ -96,7 +95,7 @@ export class AsyncRenderer {
    */
   private createWrapper(component: Component, props?: Data | null) {
     const content = createVNode(component, props)
-    if (isFunction(this.pluginConfig.wrapper)) {
+    if (typeof this.pluginConfig.wrapper === 'function') {
       return this.pluginConfig.wrapper(content)
     }
     return content;
