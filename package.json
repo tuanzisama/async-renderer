@@ -1,6 +1,6 @@
 {
   "name": "async-renderer",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Vue plugin for rendering components asynchronously outside main app context with automatic lifecycle management and DOM cleanup.",
   "type": "module",
   "license": "MIT",
