@@ -36,6 +36,9 @@ function useAsyncRenderer() {
    * @param options - Renderer options
    */
   function create(component: AsyncRendererComponent, props?: Data | null, options?: AsyncRendererOptions) {
+    if (!appContext) {
+      throw new Error('AsyncRendererPlugin is not installed correctly: app context is missing.')
+    }
     const arInstance = new AsyncRenderer(component, merge({ props: props || {}, pluginConfig: pluginConfig || {}, appContext }, options))
     map.set(arInstance.instanceId, arInstance)
     return arInstance

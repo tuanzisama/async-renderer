@@ -1,7 +1,7 @@
 import type { App, AppContext, AsyncComponentLoader, Component } from 'vue'
 import { createApp, createVNode, defineAsyncComponent } from 'vue'
 import type { AsyncRendererProvide, AsyncRendererComponent, Data, AsyncRendererPluginConfig, AsyncRendererInternalConfig } from './types'
-import { isFunction, merge, values } from 'lodash-es'
+import { isFunction } from 'lodash-es'
 import { customAlphabet } from 'nanoid'
 
 const nanoid = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz', 10)
@@ -32,9 +32,14 @@ export class AsyncRenderer {
   private wrapperEl!: Element
 
   /**
+   * Parent app instance reference
+   */
+  private app: App
+
+  /**
    * Parent app context reference
    */
-  private appContext: App & AppContext
+  private parentContext: AppContext
 
   /**
    * Plugin configuration settings
@@ -45,6 +50,16 @@ export class AsyncRenderer {
    * Unique instance identifier
    */
   private _id: string;
+
+  /**
+   * Intersection observer for auto-destroy functionality
+   */
+  private intersectionObserver?: IntersectionObserver;
+
+  /**
+   * Mutation observer for monitoring DOM changes
+   */
+  private mutationObserver?: MutationObserver
 
   /**
    * Creates new AsyncRenderer instance
@@ -58,9 +73,10 @@ export class AsyncRenderer {
       this.component = component
     }
 
-    this.appContext = options.appContext;
+    this.app = options.appContext as App;
+    this.parentContext = this.app._context;
     this.pluginConfig = options.pluginConfig
-    this.options = merge({ props: null, autoDestroy: true, }, options)
+    this.options = Object.assign({ props: null, autoDestroy: true, }, options)
     this._id = nanoid(12)
 
     this.render();
@@ -87,50 +103,93 @@ export class AsyncRenderer {
   }
 
   /**
+   * Merges parent app components into current app
+   * @param app - The Vue app instance to configure
+   * @private
+   */
+  private mergeParentComponents(app: App<Element>): void {
+    const parentComponents = this.parentContext.components
+    if (parentComponents) {
+      Object.keys(parentComponents).forEach((name) => {
+        app.component(name, parentComponents[name])
+      })
+    }
+  }
+
+  /**
+   * Sets up app-level provides for context sharing
+   * @param app - The Vue app instance to configure
+   * @private
+   */
+  private inheritParentProvides(app: App<Element>): void {
+    const parentProvides = this.parentContext.provides
+    if (parentProvides) {
+      // Merge parent provides into current app context
+      Object.assign(app._context.provides, parentProvides)
+    }
+  }
+
+  /**
+   * Creates and configures the Vue app instance with parent context inheritance
+   * @returns Configured Vue app instance
+   * @private
+   */
+  private createAndConfigureApp(): App<Element> {
+    const content = this.createWrapper(this.component, this.options.props)
+    const app = createApp(content)
+
+    // Inherit parent components (Vue.extend behavior)
+    this.mergeParentComponents(app)
+
+    // Inherit parent provides/provides for dependency injection
+    this.inheritParentProvides(app)
+
+    // Provide destroy method for internal component access
+    app.provide<AsyncRendererProvide>('asyncRenderer', {
+      destroy: this.destroy.bind(this),
+    })
+
+    return app
+  }
+
+  /**
+   * Creates wrapper DOM element for component mounting
+   * @returns DOM element with instance ID
+   * @private
+   */
+  private createWrapperElement(): Element {
+    const wrapperEl = this.options.el ?? document.createElement('div')
+    wrapperEl.setAttribute('id', this.instanceId)
+    return wrapperEl
+  }
+
+  /**
    * Renders component by creating Vue app and mounting to DOM
    */
-  private render() {
+  private render(): void {
     try {
-      const content = this.createWrapper(this.component, this.options.props)
+      // Create wrapper element
+      this.wrapperEl = this.createWrapperElement()
 
-      this.wrapperEl = this.options.el ?? document.createElement('div')
-      this.wrapperEl.setAttribute('id', this.instanceId)
+      // Create and configure Vue app with parent context inheritance
+      this.instance = this.createAndConfigureApp()
 
-      this.instance = createApp(content)
-
-      const context = this.appContext._context
-
-      this.instance._context.config = context.config
-      this.instance._context.provides = context.provides
-      this.instance._context.components = context.components
-
-      const originApp = this.instance._context.app
-      this.instance._context.app = context.app
-
-      // restore the original app context properties
-      this.instance._context.app._component = originApp._component
-      this.instance._context.app._container = originApp._container
-      this.instance._context.app._context = originApp._context
-      this.instance._context.app._instance = originApp._instance
-      this.instance._context.app._uid = originApp._uid
-      this.instance._context.app._props = originApp._props
-
-      this.instance.provide<AsyncRendererProvide>('asyncRenderer', {
-        destroy: this.destroy.bind(this),
-      })
-
+      // Delay mounting to ensure DOM is ready (maintains original behavior)
       setTimeout(() => {
         this.instance!.mount(this.wrapperEl)
-        document.body.appendChild(this.wrapperEl)
+        // Check if element is already in DOM to prevent duplicate append
+        if (!this.wrapperEl.parentNode) {
+          document.body.appendChild(this.wrapperEl)
+        }
 
+        // Register observers for auto-destroy if enabled
         if (this.options.autoDestroy) {
           this.registerObserver()
         }
       }, 5)
     }
     catch (error) {
-      console.error(new Error('Async renderer initialization failed.'))
-      console.error(error)
+      console.error('[AsyncRenderer] Initialization failed:', error)
     }
   }
 
@@ -139,24 +198,24 @@ export class AsyncRenderer {
    * Sets up IntersectionObserver and MutationObserver
    */
   private registerObserver() {
-    const intersectionObserver = new IntersectionObserver((entries) => {
+    this.intersectionObserver = new IntersectionObserver((entries) => {
       const isHidden = !!(entries.find(entry => entry.intersectionRatio <= 0))
       if (isHidden) {
         this.destroy()
       }
     })
 
-    const mutationObserver = new MutationObserver((evt) => {
+    this.mutationObserver = new MutationObserver((evt) => {
       const nodes = evt.reduce<Element[]>((acc, record) => {
-        const addedNodes = [...values(record.addedNodes)].filter(el => el.nodeType === 1) as Element[]
+        const addedNodes = [...Object.values(record.addedNodes)].filter(el => el.nodeType === 1) as Element[]
         return acc.concat(addedNodes)
       }, [])
 
       nodes.forEach((node) => {
-        intersectionObserver.observe(node)
+        this.intersectionObserver?.observe(node)
       })
     })
-    mutationObserver.observe(this.wrapperEl, { childList: true })
+    this.mutationObserver.observe(this.wrapperEl, { childList: true })
   }
 
   /**
@@ -164,11 +223,27 @@ export class AsyncRenderer {
    */
   public destroy() {
     if (this.instance) {
-      this.instance?.unmount()
+      // Disconnect observers to prevent memory leaks
+      if (this.intersectionObserver) {
+        this.intersectionObserver.disconnect()
+        this.intersectionObserver = undefined
+      }
+      if (this.mutationObserver) {
+        this.mutationObserver.disconnect()
+        this.mutationObserver = undefined
+      }
+
+      // Unmount Vue app instance
+      this.instance.unmount()
+      this.instance = null
+
+      // Remove wrapper element from DOM
       const wrapperEl = document.getElementById(this.instanceId)
       if (wrapperEl) {
         document.body.removeChild(wrapperEl)
       }
+
+      // Call destroy callback
       this.options?.onDestroy?.()
     }
   }
