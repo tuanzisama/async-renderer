@@ -5,6 +5,13 @@ export type AsyncRendererComponent = Component | AsyncComponentLoader
 
 export interface AsyncRendererPluginConfig {
   wrapper?: (defaultSlot: VNode) => Component | VNode
+  /**
+   * Custom inherit context from parent app
+   * @param context Current context
+   * @param parentContext Parent context
+   * @returns void
+   */
+  inheritContext?: (context: AppContext, parentContext: AppContext) => void
 }
 
 export interface AsyncRendererOptions {

@@ -143,6 +143,11 @@ export class AsyncRenderer {
     // Inherit parent provides/provides for dependency injection
     this.inheritParentProvides(app)
 
+    // custom inherit context
+    if (typeof this.pluginConfig.inheritContext === 'function') {
+      this.pluginConfig.inheritContext(app._context, this.parentContext)
+    }
+
     // Provide destroy method for internal component access
     app.provide<AsyncRendererProvide>('asyncRenderer', {
       destroy: this.destroy.bind(this),
